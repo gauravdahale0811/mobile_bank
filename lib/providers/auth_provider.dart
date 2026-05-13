@@ -65,6 +65,24 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Sends a Firebase password-reset email to the derived address for [phone].
+  /// The lender receives the link at {phone}@mobilebank.com — the Firebase
+  /// project admin must configure email delivery for that domain, or use a
+  /// relay address in Firebase Auth email templates.
+  Future<bool> sendMpinReset(String phone) async {
+    _loading();
+    try {
+      await _auth.sendPasswordResetEmail(email: _emailFrom(phone));
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _error(_friendlyMessage(e.code));
+      return false;
+    }
+  }
+
   /// Re-authenticates with [currentMpin] then updates to [newMpin].
   Future<bool> changeMpin(String currentMpin, String newMpin) async {
     _loading();

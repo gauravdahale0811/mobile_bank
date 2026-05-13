@@ -277,32 +277,121 @@ class _MpinScreenState extends State<MpinScreen> {
   void _showForgotMpinSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.help_outline, size: 40),
-            const SizedBox(height: 12),
-            const Text(
-              'Forgot MPIN?',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Contact your administrator to reset your MPIN.',
+      builder: (ctx) => _ForgotMpinSheet(phone: widget.phone),
+    );
+  }
+}
+
+// ── Forgot MPIN bottom sheet ──────────────────────────────────────────────────
+
+class _ForgotMpinSheet extends StatefulWidget {
+  final String phone;
+  const _ForgotMpinSheet({required this.phone});
+
+  @override
+  State<_ForgotMpinSheet> createState() => _ForgotMpinSheetState();
+}
+
+class _ForgotMpinSheetState extends State<_ForgotMpinSheet> {
+  bool _sent = false;
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _sendReset() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final provider = context.read<app_auth.AuthProvider>();
+    final ok = await provider.sendMpinReset(widget.phone);
+
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _sent = true);
+    } else {
+      setState(() => _error = provider.errorMessage);
+    }
+    setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maskedPhone =
+        '+91 ${widget.phone.substring(0, 2)}XXXXXX${widget.phone.substring(widget.phone.length - 2)}';
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _sent ? Icons.mark_email_read_outlined : Icons.lock_reset,
+            size: 48,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _sent ? 'Reset Link Sent' : 'Forgot MPIN?',
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _sent
+                ? 'A password reset link has been sent to the email linked to $maskedPhone. '
+                  'Follow the link to set a new MPIN, then log in again.'
+                : 'We will send a reset link to the email registered for $maskedPhone.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _error!,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.error, fontSize: 13),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+          ],
+          const SizedBox(height: 24),
+          if (_sent)
             FilledButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: const Text('Done'),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _loading ? null : _sendReset,
+                    child: _loading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Send Reset Link'),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
