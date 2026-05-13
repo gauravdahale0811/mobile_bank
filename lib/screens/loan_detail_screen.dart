@@ -6,6 +6,7 @@ import '../models/emi_payment.dart';
 import '../services/firestore_service.dart';
 import '../widgets/emi_tile.dart';
 import 'edit_loan_screen.dart';
+import 'borrower_history_screen.dart';
 
 class LoanDetailScreen extends StatelessWidget {
   final Loan loan;
@@ -212,7 +213,24 @@ class _LoanSummaryHeader extends StatelessWidget {
             children: [
               const Icon(Icons.phone, size: 16),
               const SizedBox(width: 6),
-              Text(loan.borrowerPhone),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BorrowerHistoryScreen(
+                      borrowerName: loan.borrowerName,
+                      borrowerPhone: loan.borrowerPhone,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  loan.borrowerPhone,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
               const Spacer(),
               _StatusChip(status: loan.status),
             ],

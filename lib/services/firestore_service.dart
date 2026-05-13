@@ -27,6 +27,17 @@ class FirestoreService {
         .map((snap) => snap.docs.map(Loan.fromFirestore).toList());
   }
 
+  /// All loans (across any status) for a single borrower, newest first.
+  /// Requires the composite index in firestore.indexes.json:
+  ///   borrowerPhone ASC + disbursementDate DESC
+  Stream<List<Loan>> loansForBorrower(String borrowerPhone) {
+    return _loans
+        .where('borrowerPhone', isEqualTo: borrowerPhone)
+        .orderBy('disbursementDate', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map(Loan.fromFirestore).toList());
+  }
+
   Future<Loan> addLoan(Loan loan) async {
     final ref = await _loans.add(loan.toFirestore());
     final doc = await ref.get();
