@@ -3,15 +3,41 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/loan.dart';
 import '../models/emi_payment.dart';
+import '../providers/auth_provider.dart';
 import '../services/firestore_service.dart';
+import '../services/statement_service.dart';
 import '../widgets/emi_tile.dart';
 import 'edit_loan_screen.dart';
 import 'borrower_history_screen.dart';
 
-class LoanDetailScreen extends StatelessWidget {
+class LoanDetailScreen extends StatefulWidget {
   final Loan loan;
 
   const LoanDetailScreen({super.key, required this.loan});
+
+  @override
+  State<LoanDetailScreen> createState() => _LoanDetailScreenState();
+}
+
+class _LoanDetailScreenState extends State<LoanDetailScreen> {
+  List<EmiPayment> _payments = [];
+  bool _sharing = false;
+
+  Future<void> _shareStatement() async {
+    if (_payments.isEmpty) return;
+    final lenderPhone =
+        context.read<AuthProvider>().phone ?? '';
+    setState(() => _sharing = true);
+    try {
+      await StatementService.shareStatement(
+        loan: widget.loan,
+        payments: _payments,
+        lenderPhone: lenderPhone,
+      );
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +46,23 @@ class LoanDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(loan.borrowerName),
+        title: Text(widget.loan.borrowerName),
         actions: [
+          if (_sharing)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
+                  child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Share Statement',
+              onPressed: _payments.isEmpty ? null : _shareStatement,
+            ),
           // Edit borrower details
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -29,14 +70,14 @@ class LoanDetailScreen extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => EditLoanScreen(loan: loan)),
+                  builder: (_) => EditLoanScreen(loan: widget.loan)),
             ),
           ),
           // Change loan status
           PopupMenuButton<LoanStatus>(
             tooltip: 'Change status',
             onSelected: (status) =>
-                service.updateLoanStatus(loan.id, status),
+                service.updateLoanStatus(widget.loan.id, status),
             itemBuilder: (_) => LoanStatus.values
                 .map((s) => PopupMenuItem(
                       value: s,
@@ -48,7 +89,7 @@ class LoanDetailScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          _LoanSummaryHeader(loan: loan, fmt: fmt),
+          _LoanSummaryHeader(loan: widget.loan, fmt: fmt),
           const Divider(height: 1),
           Padding(
             padding:
@@ -63,13 +104,13 @@ class LoanDetailScreen extends StatelessWidget {
                       .titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                _CollectedBadge(loanId: loan.id, service: service),
+                _CollectedBadge(loanId: widget.loan.id, service: service),
               ],
             ),
           ),
           Expanded(
             child: StreamBuilder<List<EmiPayment>>(
-              stream: service.paymentsStream(loan.id),
+              stream: service.paymentsStream(widget.loan.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -83,6 +124,12 @@ class LoanDetailScreen extends StatelessWidget {
                   return const Center(child: Text('No EMI schedule found.'));
                 }
 
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _payments != payments) {
+                    setState(() => _payments = payments);
+                  }
+                });
+
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   itemCount: payments.length,
@@ -92,7 +139,7 @@ class LoanDetailScreen extends StatelessWidget {
                       onMarkPaid: () =>
                           _markPaid(context, service, payments[i]),
                       onMarkWaived: () => service.markEmiWaived(
-                          loan.id, payments[i].id),
+                          widget.loan.id, payments[i].id),
                     );
                   },
                 );
@@ -163,7 +210,7 @@ class LoanDetailScreen extends StatelessWidget {
 
     if (confirm == true) {
       await service.markEmiPaid(
-        loan.id,
+        widget.loan.id,
         payment,
         remarks: remarksCtrl.text.trim().isEmpty
             ? null
