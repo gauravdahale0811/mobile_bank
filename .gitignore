@@ -1,26 +1,50 @@
-# Angular specific
-/dist/
-/out-tsc/
-/tmp/
-/coverage/
-/e2e/test-output/
-/.angular/
-.angular/
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
 
-# Node modules and dependency files
-/node_modules/
-/package-lock.json
-/yarn.lock
+# Android
+android/local.properties
+android/.gradle
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/gradle/
+**/android/**/GeneratedPluginRegistrant.java
+android/key.properties
+android/**/*.keystore
 
-# Environment files
-/.env
+# iOS
+ios/.generated/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Pods/
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Runner/Runner.entitlements
+ios/Runner.xcworkspace/
 
-# Angular CLI and build artefacts
-/.angular-cli.json
-/.ng/
+# Firebase (never commit real credentials)
+google-services.json
+GoogleService-Info.plist
+lib/firebase_options.dart
 
-# TypeScript cache
-*.tsbuildinfo
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Logs
 npm-debug.log*
